@@ -7,8 +7,8 @@ networkx==3.4.2
 numpy==2.2.4
 pillow==11.2.1
 setuptools==78.1.0
-sympy==1.13.1
-torch==2.6.0
-torchaudio==2.6.0
-torchvision==0.21.0
+sympy==1.13.3
+torch==2.8.0.dev20250418+cu128
+torchaudio==2.6.0.dev20250419+cu128
+torchvision==0.22.0.dev20250419+cu128
 typing_extensions==4.13.2

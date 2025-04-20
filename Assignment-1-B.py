@@ -2,7 +2,7 @@ import numpy as np
 
 
 class Layer:
-    def __init__(self, neurons_size: int, inputs_size: int, activation: str = 'sigmoid'):
+    def __init__(self, neurons_size: int, inputs_size: int, activation: str = 'sigmoid', leaky_slope: float = 0.01, softmax_dim: int = 0):
         '''
         Initialize the layer with random weights and biases
 
@@ -11,116 +11,79 @@ class Layer:
                 The number of neurons in the layer
             inputs_size: int
                 The number of inputs to the layer
+            activation: str
+                The activation function to use
+            leaky_slope: float
+                The slope of the leaky relu activation function
+            softmax_dim: int
+                The dimension of the softmax activation function
         '''
 
         # initialize weights and biases with random values
-        # multiply by 0.1 to avoid large weights
-        self._weights: list[float] = np.random.randn(
-            neurons_size, inputs_size) * 0.1
+        # use the ha initialization method to initialize the weights if the activation function is relu or leaky relu else use the xavier initialization method
+        if activation == 'relu' or activation == 'leaky_relu':
+            self._weights: list[float] = np.random.randn(
+                neurons_size, inputs_size) * np.sqrt(2 / inputs_size)
+        else:
+            self._weights: list[float] = np.random.randn(
+                neurons_size, inputs_size) * np.sqrt(1 / inputs_size)
+
         self._biases: list[float] = np.zeros(neurons_size)
         self._activation: str = activation
+        self._leaky_slope: float = leaky_slope
+        self._softmax_dim: int = softmax_dim
 
-    def _activation_function(self, sum: np.ndarray, activation: str) -> np.ndarray:
-        '''
-        Activation function
+        self._activation_function: dict[str, callable] = {
+            'sigmoid': lambda sum: 1.0 / (1.0 + np.exp(-sum)),
+            'tanh': lambda sum: np.tanh(sum),
+            'relu': lambda sum: np.maximum(0, sum),
+            'leaky_relu': lambda sum: np.maximum(self._leaky_slope * sum, sum),
+            'softmax': lambda sum: np.exp(sum) / np.sum(np.exp(sum), axis=self._softmax_dim, keepdims=True)
+        }
 
-        Parameters:
-            sum: np.ndarray
-                The sum of the inputs
-        '''
-        # use the activation function specified in the constructor
-
-        if activation == 'sigmoid':
-            return self._sigmoid(sum)
-        elif activation == 'tanh':
-            return self._tanh(sum)
-        elif activation == 'relu':
-            return self._relu(sum)
-        elif activation == 'leaky_relu':
-            return self._leaky_relu(sum)
-        else:
-            raise ValueError(f"Activation function {activation} not found")
-
-    def _sigmoid(self, sum: np.ndarray) -> np.ndarray:
-        '''
-        Sigmoid activation function
-
-        Parameters:
-            sum: np.ndarray
-                The sum of the inputs
-        Returns:
-            np.ndarray
-                The output of the activation function
-        '''
-        # return based on the sigmoid function where the output is 1 divided by 1 plus e to the power of -z(sum)
-        return 1.0 / (1.0 + np.exp(-sum))
-
-    def _tanh(self, sum: np.ndarray) -> np.ndarray:
-        '''
-        Tanh activation function
-
-        Parameters:
-            sum: np.ndarray
-                The sum of the inputs
-        Returns:
-            np.ndarray
-                The output of the activation function
-        '''
-        # return based on the tanh function where the output is the hyperbolic tangent of the sum
-        return np.tanh(sum)
-
-    def _relu(self, sum: np.ndarray) -> np.ndarray:
-        '''
-        ReLU activation function
-
-        Parameters:
-            sum: np.ndarray
-                The sum of the inputs
-        Returns:
-            np.ndarray
-                The output of the activation function
-        '''
-        # return based on the relu function where the output is the maximum of 0 and the sum
-        return np.maximum(0, sum)
-
-    def _leaky_relu(self, sum: np.ndarray) -> np.ndarray:
-        '''
-        Leaky ReLU activation function
-
-        Parameters:
-            sum: np.ndarray
-                The sum of the inputs
-        Returns:
-            np.ndarray
-                The output of the activation function
-        '''
-        # return based on the leaky relu function where the output is the maximum of 0.01 multiplied by the sum and the sum
-        return np.maximum(0.01 * sum, sum)
-
-    def forward(self, inputs: np.ndarray, activation: str = 'sigmoid') -> np.ndarray:
+    def forward(self, inputs: np.ndarray) -> np.ndarray:
         '''
         Forward pass
 
         Parameters:
             inputs: np.ndarray
                 The inputs to the layer
-            activation: str
-                The activation function to use
         Returns:
             np.ndarray
                 The outputs of the layer
         '''
         # calculate the sum of the inputs multiplied by the weights and add the biases
         sum: np.ndarray = np.dot(self._weights, inputs) + self._biases
-        return self._activation_function(sum, activation)
+
+        if self._activation in self._activation_function:
+            return self._activation_function[self._activation](sum)
+        else:
+            raise ValueError(
+                f"Activation function {self._activation} not found")
 
 
 # test the layer
 if __name__ == "__main__":
 
-    layer: Layer = Layer(5, 3)
-    inputs: np.ndarray = np.array([2.0, -3.0, 5.0])
-    print(f'Sigmoid activation: {layer.forward(inputs, "sigmoid")}')
-    print(f'Tanh activation: {layer.forward(inputs, "tanh")}')
-    print(f'ReLU activation: {layer.forward(inputs, "relu")}')
-    print(f'Leaky ReLU activation: {layer.forward(inputs, "leaky_relu")}')
+    test_inputs: np.ndarray = np.array([2.0, -3.0, 5.0])
+
+    # test the layer with different activation functions
+    for activation in ['sigmoid', 'tanh', 'relu', 'leaky_relu', 'softmax']:
+        layer: Layer = Layer(5, 3, activation=activation)
+        print(f'{activation.capitalize()} activation: {layer.forward(test_inputs)}')
+    print('')
+
+    # test the layer with different leaky slopes
+    for leaky_slope in [0.01, 0.1, 1.0]:
+        layer: Layer = Layer(5, 3, activation='leaky_relu',
+                             leaky_slope=leaky_slope)
+        print(
+            f'Leaky ReLU with slope {leaky_slope}: {layer.forward(test_inputs)}')
+    print('')
+
+    # test the layer with a batch of inputs
+    batch_inputs: np.ndarray = np.random.randn(4, 3)
+    layer: Layer = Layer(5, 3, activation='softmax', softmax_dim=0)
+    for i, sample in enumerate(batch_inputs):
+        print(f'Sample {i+1}: {sample}')
+        print(f'Output {i+1}: {layer.forward(sample)}')
