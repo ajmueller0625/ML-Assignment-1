@@ -42,7 +42,8 @@ class Layer:
             'tanh': nn.Tanh(),
             'relu': nn.ReLU(),
             'leaky_relu': nn.LeakyReLU(negative_slope=self._leaky_slope),
-            'softmax': nn.Softmax(dim=self._softmax_dim)
+            'softmax': nn.Softmax(dim=self._softmax_dim),
+            'none': nn.Identity()
         }
 
     def set_weights(self, weights: torch.Tensor):
@@ -99,8 +100,12 @@ class Layer:
                 The outputs of the layer
         '''
         # calculate the sum of the inputs multiplied by the weights and add the biases
-        # sum: torch.Tensor = torch.matmul(self._weights, inputs) + self._biases
-        sum: torch.Tensor = self._weights @ inputs + self._biases
+        if inputs.dim() == 2:
+            sum: torch.Tensor = torch.matmul(
+                inputs, self._weights.t()) + self._biases
+        else:
+            sum: torch.Tensor = torch.matmul(
+                inputs, self._weights) + self._biases
 
         if self._activation in self._activation_function:
             return self._activation_function[self._activation](sum)
@@ -187,29 +192,20 @@ class Perceptron(nn.Module):
         self.layers = nn.ModuleList(layers)
 
     def forward(self, inputs: torch.Tensor) -> torch.Tensor:
+        '''
+        Forward pass
 
-        # get the dimension of the input
-        input_dim: int = inputs.dim()
-
-        # if the input is a single sample, unsqueeze it
-        if input_dim == 1:
-            inputs = inputs.unsqueeze(0)
-
-        # if the input is a batch of samples, process each sample individually
-        batch_output: list[torch.Tensor] = []
-
-        # process each sample in the batch
-        for sample in inputs:
-
-            # process the sample through the layers
-            for layer in self.layers:
-                sample = layer(sample)
-
-            # store the output of the sample
-            batch_output.append(sample)
-
-        # stack the outputs of the samples into a single tensor
-        return torch.stack(batch_output, dim=0).squeeze(0)
+        Parameters:
+            inputs: torch.Tensor
+                The inputs to the perceptron
+        Returns:
+            torch.Tensor
+                The outputs of the perceptron
+        '''
+        x = inputs
+        for layer in self.layers:
+            x = layer(x)
+        return x
 
 
 # Test the Perceptron model with MNIST dataset
@@ -257,8 +253,8 @@ if __name__ == "__main__":
         hidden_size=hidden_size,
         output_size=output_size,
         hidden_activation='relu',
-        output_activation='softmax',
-        softmax_dim=0
+        output_activation='none',
+        softmax_dim=-1
     ).to(device)
 
     # define the optimizer
