@@ -174,8 +174,11 @@ cython_debug/
 .pypirc
 
 # Data
+data/
+data/MNIST/
 data/MNIST/raw/*
 data/MNIST/processed/*
+data/CIFAR10/
 data/CIFAR10/raw/*
 data/CIFAR10/processed/*
 
@@ -185,4 +188,8 @@ mlruns/
 # Checkpoints
 checkpoints/
 
-
+# Jupyter Notebooks
+.ipynb
+.pdb
+.ipynb_checkpoints
+.pdf
