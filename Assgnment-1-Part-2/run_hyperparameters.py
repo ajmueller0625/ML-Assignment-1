@@ -10,6 +10,7 @@ from perceptron import Perceptron
 from cnnLayer import CNNLayer
 import time
 
+
 def train_with_hyperparams(config, config_id):
     # set random seed for reproducibility
     torch.manual_seed(42)
@@ -18,11 +19,14 @@ def train_with_hyperparams(config, config_id):
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
     print(f'Using device: {device}\n')
 
+    print(f'Training with configuration {config_id}\n')
+
     # define transformations for training set with augmentation
     train_transform = transforms.Compose([
-        transforms.RandomRotation(config['rotation_degrees']),
-        transforms.RandomAffine(degrees=0, translate=config['translate'], scale=config['scale'], shear=config['shear']),
-        transforms.ColorJitter(brightness=config['brightness'], contrast=config['contrast']),
+        transforms.RandomRotation(10),
+        transforms.RandomAffine(degrees=0, translate=(
+            0.1, 0.1), scale=(0.9, 1.1), shear=5),
+        transforms.ColorJitter(brightness=0.2, contrast=0.2),
         transforms.ToTensor(),
         transforms.Normalize((0.5,), (0.5,))
     ])
@@ -32,7 +36,7 @@ def train_with_hyperparams(config, config_id):
         transforms.ToTensor(),
         transforms.Normalize((0.5,), (0.5,))
     ])
-    
+
     # Load mnist dataset
     train_dataset = torchvision.datasets.MNIST(
         root='./data',
@@ -56,35 +60,24 @@ def train_with_hyperparams(config, config_id):
 
     # create cnn model
     model = CNNLayer(
-        input_channels=config['input_channels'], 
-        num_classes=config['num_classes'], 
-        dropout_rate=config['dropout_rate'], 
+        input_channels=config['input_channels'],
+        num_classes=config['num_classes'],
+        dropout_rate=config['dropout_rate'],
         weight_decay=config['weight_decay']
     )
 
     # define loss function and optimizer
     criterion = nn.CrossEntropyLoss()
     optimizer = torch.optim.Adam(
-        model.parameters(), 
-        lr=config['learning_rate'], 
+        model.parameters(),
+        lr=config['learning_rate'],
         weight_decay=config['weight_decay']
     )
 
     # create learning rate scheduler
-    if config['scheduler'] == 'cosine':
-        scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(
-            optimizer, T_max=10, eta_min=1e-6
-        )
-    elif config['scheduler'] == 'reduce_plateau':
-        scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(
-            optimizer, mode='min', factor=0.1, patience=2
-        )
-    elif config['scheduler'] == 'step':
-        scheduler = torch.optim.lr_scheduler.StepLR(
-            optimizer, step_size=3, gamma=0.1
-        )
-    else:
-        scheduler = None
+    scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(
+        optimizer, T_max=10, eta_min=1e-6
+    )
 
     # create checkpoint directory for this configuration
     checkpoint_dir = f'./checkpoints/config_{config_id}'
@@ -111,16 +104,10 @@ def train_with_hyperparams(config, config_id):
         early_stopping_patience=config['early_stopping_patience']
     )
     training_time = time.time() - start_time
-    
+
     # get final test performance
     test_loss, test_accuracy = trainer.test()
-    
-    # print results
-    print(f"\nResults for Configuration {config_id}:")
-    print(f"Test Accuracy: {test_accuracy:.2f}%")
-    print(f"Test Loss: {test_loss:.4f}")
-    print(f"Training Time: {training_time:.2f} seconds ({training_time/60:.2f} minutes)")
-    
+
     return {
         'config_id': config_id,
         'test_accuracy': test_accuracy,
@@ -129,6 +116,7 @@ def train_with_hyperparams(config, config_id):
         'epochs_completed': trainer.total_epochs_completed,
         **config  # include all hyperparameters
     }
+
 
 if __name__ == "__main__":
     # list of hyperparameter configurations to try
@@ -141,17 +129,10 @@ if __name__ == "__main__":
             'weight_decay': 1e-4,
             'learning_rate': 0.001,
             'batch_size': 64,
-            'rotation_degrees': 10,
-            'translate': (0.1, 0.1),
-            'scale': (0.9, 1.1),
-            'shear': 5,
-            'brightness': 0.2,
-            'contrast': 0.2,
-            'scheduler': 'cosine',
             'num_epochs': 10,
             'early_stopping_patience': 5
         },
-        
+
         # configuration 2: higher dropout rate
         {
             'input_channels': 1,
@@ -160,18 +141,11 @@ if __name__ == "__main__":
             'weight_decay': 1e-4,
             'learning_rate': 0.001,
             'batch_size': 64,
-            'rotation_degrees': 10,
-            'translate': (0.1, 0.1),
-            'scale': (0.9, 1.1),
-            'shear': 5,
-            'brightness': 0.2,
-            'contrast': 0.2,
-            'scheduler': 'cosine',
             'num_epochs': 10,
             'early_stopping_patience': 5
         },
-        
-        # configuration 3: lower dropout
+
+        # configuration 3: lower dropout rate
         {
             'input_channels': 1,
             'num_classes': 10,
@@ -179,17 +153,10 @@ if __name__ == "__main__":
             'weight_decay': 1e-4,
             'learning_rate': 0.001,
             'batch_size': 64,
-            'rotation_degrees': 10,
-            'translate': (0.1, 0.1),
-            'scale': (0.9, 1.1),
-            'shear': 5,
-            'brightness': 0.2,
-            'contrast': 0.2,
-            'scheduler': 'cosine',
             'num_epochs': 10,
             'early_stopping_patience': 5
         },
-        
+
         # configuration 4: higher weight decay
         {
             'input_channels': 1,
@@ -198,17 +165,10 @@ if __name__ == "__main__":
             'weight_decay': 1e-3,
             'learning_rate': 0.001,
             'batch_size': 64,
-            'rotation_degrees': 10,
-            'translate': (0.1, 0.1),
-            'scale': (0.9, 1.1),
-            'shear': 5,
-            'brightness': 0.2,
-            'contrast': 0.2,
-            'scheduler': 'cosine',
             'num_epochs': 10,
             'early_stopping_patience': 5
         },
-        
+
         # configuration 5: lower weight decay
         {
             'input_channels': 1,
@@ -217,17 +177,10 @@ if __name__ == "__main__":
             'weight_decay': 1e-5,
             'learning_rate': 0.001,
             'batch_size': 64,
-            'rotation_degrees': 10,
-            'translate': (0.1, 0.1),
-            'scale': (0.9, 1.1),
-            'shear': 5,
-            'brightness': 0.2,
-            'contrast': 0.2,
-            'scheduler': 'cosine',
             'num_epochs': 10,
             'early_stopping_patience': 5
         },
-        
+
         # configuration 6: higher learning rate
         {
             'input_channels': 1,
@@ -236,17 +189,10 @@ if __name__ == "__main__":
             'weight_decay': 1e-4,
             'learning_rate': 0.01,
             'batch_size': 64,
-            'rotation_degrees': 10,
-            'translate': (0.1, 0.1),
-            'scale': (0.9, 1.1),
-            'shear': 5,
-            'brightness': 0.2,
-            'contrast': 0.2,
-            'scheduler': 'cosine',
             'num_epochs': 10,
             'early_stopping_patience': 5
         },
-        
+
         # configuration 7: lower learning rate
         {
             'input_channels': 1,
@@ -255,17 +201,10 @@ if __name__ == "__main__":
             'weight_decay': 1e-4,
             'learning_rate': 0.0001,
             'batch_size': 64,
-            'rotation_degrees': 10,
-            'translate': (0.1, 0.1),
-            'scale': (0.9, 1.1),
-            'shear': 5,
-            'brightness': 0.2,
-            'contrast': 0.2,
-            'scheduler': 'cosine',
             'num_epochs': 10,
             'early_stopping_patience': 5
         },
-        
+
         # configuration 8: larger batch size
         {
             'input_channels': 1,
@@ -274,17 +213,10 @@ if __name__ == "__main__":
             'weight_decay': 1e-4,
             'learning_rate': 0.001,
             'batch_size': 128,
-            'rotation_degrees': 10,
-            'translate': (0.1, 0.1),
-            'scale': (0.9, 1.1),
-            'shear': 5,
-            'brightness': 0.2,
-            'contrast': 0.2,
-            'scheduler': 'cosine',
             'num_epochs': 10,
             'early_stopping_patience': 5
         },
-        
+
         # configuration 9: smaller batch size
         {
             'input_channels': 1,
@@ -293,18 +225,11 @@ if __name__ == "__main__":
             'weight_decay': 1e-4,
             'learning_rate': 0.001,
             'batch_size': 32,
-            'rotation_degrees': 10,
-            'translate': (0.1, 0.1),
-            'scale': (0.9, 1.1),
-            'shear': 5,
-            'brightness': 0.2,
-            'contrast': 0.2,
-            'scheduler': 'cosine',
             'num_epochs': 10,
             'early_stopping_patience': 5
         },
-        
-        # configuration 10: different scheduler
+
+        # configuration 10: larger number of epochs
         {
             'input_channels': 1,
             'num_classes': 10,
@@ -312,34 +237,28 @@ if __name__ == "__main__":
             'weight_decay': 1e-4,
             'learning_rate': 0.001,
             'batch_size': 64,
-            'rotation_degrees': 10,
-            'translate': (0.1, 0.1),
-            'scale': (0.9, 1.1),
-            'shear': 5,
-            'brightness': 0.2,
-            'contrast': 0.2,
-            'scheduler': 'reduce_plateau',
-            'num_epochs': 10,
+            'num_epochs': 20,
             'early_stopping_patience': 5
         }
     ]
-    
+
     # create directory for results
     results_dir = './hyperparameter_results'
     os.makedirs(results_dir, exist_ok=True)
-    
+
     # train with each configuration and collect results
     results = []
     for i, config in enumerate(hyperparameter_configs):
         result = train_with_hyperparams(config, i+1)
         results.append(result)
-    
-    # save results to csv
+
+    # save results to csv to get the best configuration
     results_df = pd.DataFrame(results)
-    results_df.to_csv(os.path.join(results_dir, 'hyperparameter_results.csv'), index=False)
-    results_df_sorted = results_df.sort_values('test_accuracy', ascending=False)
-    
-    # find the best configuration 
+    results_df.to_csv(os.path.join(
+        results_dir, 'hyperparameter_results.csv'), index=False)
+    results_df_sorted = results_df.sort_values(
+        'test_accuracy', ascending=False)
+
+    # find the best configuration
     best_config_id = results_df_sorted.iloc[0]['config_id']
     print(f"\nBest configuration: {best_config_id}")
-    

@@ -75,7 +75,7 @@ class Trainer:
             'learning_rates': [],
             'epoch_times': []  # add tracking of per-epoch times
         }
-        
+
         # initialize performance tracking
         self.total_training_time = 0
         self.epoch_start_time = 0
@@ -87,10 +87,11 @@ class Trainer:
         """
         # start timing the epoch
         self.epoch_start_time = time.time()
-        
+
         self.model.train()
         running_loss = 0.0
 
+        print(f'Epoch [{epoch+1}/{num_epochs}]')
         for i, (inputs, labels) in enumerate(self.train_loader):
             # get input size from first batch if not set
             if self.input_size is None and hasattr(inputs, 'view'):
@@ -124,13 +125,13 @@ class Trainer:
         # track learning rate
         current_lr = self.optimizer.param_groups[0]['lr']
         self.history['learning_rates'].append(current_lr)
-        
+
         # calculate and store epoch time
         epoch_time = time.time() - self.epoch_start_time
         self.history['epoch_times'].append(epoch_time)
         self.total_training_time += epoch_time
         self.total_epochs_completed += 1
-        
+
         # Print epoch time
         print(f'Epoch time: {epoch_time:.2f} seconds')
 
@@ -263,12 +264,12 @@ class Trainer:
         """
         # start timer for total training run
         total_run_start_time = time.time()
-        
+
         # reset performance tracking for a new training run
         if start_epoch == 0:
             self.total_training_time = 0
             self.total_epochs_completed = 0
-            
+
         # set mlflow experiment if provided
         if log_to_mlflow and self.experiment_name:
             mlflow.set_experiment(self.experiment_name)
@@ -303,8 +304,6 @@ class Trainer:
                 # train for one epoch
                 print('')
                 train_loss = self.train_epoch(epoch, num_epochs)
-                print(
-                    f'Epoch [{epoch+1}/{num_epochs}], Loss: {train_loss:.4f}')
 
                 # validate
                 val_loss, val_accuracy = self.validate(epoch)
@@ -327,7 +326,8 @@ class Trainer:
                 # log metrics
                 if log_to_mlflow:
                     mlflow.log_metric("train_loss", train_loss, step=epoch)
-                    mlflow.log_metric("epoch_time", self.history['epoch_times'][-1], step=epoch)
+                    mlflow.log_metric(
+                        "epoch_time", self.history['epoch_times'][-1], step=epoch)
                     if val_loss is not None:
                         mlflow.log_metric("val_loss", val_loss, step=epoch)
                     if val_accuracy is not None:
@@ -337,7 +337,7 @@ class Trainer:
                 # print validation results
                 if val_loss is not None and val_accuracy is not None:
                     print(
-                        f'Validation - Epoch [{epoch+1}/{num_epochs}], Loss: {val_loss:.4f}, Accuracy: {val_accuracy:.2f}%')
+                        f'Epoch [{epoch+1}/{num_epochs}], Loss: {val_loss:.4f}, Accuracy: {val_accuracy:.2f}%')
 
                 # check if this is the best model so far
                 is_best = False
@@ -365,24 +365,30 @@ class Trainer:
 
             # Calculate total run time
             total_run_time = time.time() - total_run_start_time
-            
+
             print("Training complete!")
 
-            
             # Print performance summary
             print("\nTraining Performance Summary:")
-            print(f"Total training time: {total_run_time:.2f} seconds ({total_run_time/60:.2f} minutes)")
+            print(
+                f"Total training time: {total_run_time:.2f} seconds ({total_run_time/60:.2f} minutes)")
             print(f"Total epochs completed: {self.total_epochs_completed}")
-            print(f"Average time per epoch: {self.total_training_time/self.total_epochs_completed:.2f} seconds")
-            print(f"Fastest epoch: {min(self.history['epoch_times']):.2f} seconds")
-            print(f"Slowest epoch: {max(self.history['epoch_times']):.2f} seconds")
-            
+            print(
+                f"Average time per epoch: {self.total_training_time/self.total_epochs_completed:.2f} seconds")
+            print(
+                f"Fastest epoch: {min(self.history['epoch_times']):.2f} seconds")
+            print(
+                f"Slowest epoch: {max(self.history['epoch_times']):.2f} seconds")
+
             # Log performance metrics to MLflow
             if log_to_mlflow:
                 mlflow.log_metric("total_training_time", total_run_time)
-                mlflow.log_metric("avg_epoch_time", self.total_training_time/self.total_epochs_completed)
-                mlflow.log_metric("fastest_epoch_time", min(self.history['epoch_times']))
-                mlflow.log_metric("slowest_epoch_time", max(self.history['epoch_times']))
+                mlflow.log_metric(
+                    "avg_epoch_time", self.total_training_time/self.total_epochs_completed)
+                mlflow.log_metric("fastest_epoch_time", min(
+                    self.history['epoch_times']))
+                mlflow.log_metric("slowest_epoch_time", max(
+                    self.history['epoch_times']))
 
             # final evaluation
             print("\nFinal Evaluation:")
@@ -401,7 +407,7 @@ class Trainer:
             final_model_path = os.path.join(
                 self.checkpoint_dir, f"final_model_{model_timestamp}.pt")
             torch.save(self.model.state_dict(), final_model_path)
-            print(f"Final model saved as {final_model_path}")
+            print(f"Final model saved as {final_model_path}\n")
 
             # log the model with mlflow
             if log_to_mlflow:
@@ -415,7 +421,8 @@ class Trainer:
                     sample_input = sample_batch.numpy()
                 else:
                     # for fnn, use the first batch of the training data
-                    sample_input = sample_batch.view(sample_batch.size(0), -1).numpy()
+                    sample_input = sample_batch.view(
+                        sample_batch.size(0), -1).numpy()
 
                 # Create custom pip requirements
                 pip_requirements = [
@@ -466,9 +473,10 @@ class Trainer:
         plt.ylabel('Loss')
         plt.legend()
         plt.grid(True)
-        plt.savefig(os.path.join(plots_dir, 'loss_curves.png')) # save the plot as a png file
-        plt.tight_layout()
-        plt.show()
+        # save the plot as a png file
+        plt.savefig(os.path.join(plots_dir, 'loss_curves.png'))
+        # plt.tight_layout()
+        # plt.show()
 
         # plot validation accuracy if available
         if len(self.history['val_accuracy']) > 0:
@@ -478,10 +486,11 @@ class Trainer:
             plt.xlabel('Epochs')
             plt.ylabel('Accuracy (%)')
             plt.grid(True)
-            plt.savefig(os.path.join(plots_dir, 'accuracy_curve.png')) # save the plot as a png file
-            plt.tight_layout()
-            plt.show()
-            
+            # save the plot as a png file
+            plt.savefig(os.path.join(plots_dir, 'accuracy_curve.png'))
+            # plt.tight_layout()
+            # plt.show()
+
         # plot epoch times
         if len(self.history['epoch_times']) > 0:
             plt.figure(figsize=(10, 6))
@@ -490,9 +499,10 @@ class Trainer:
             plt.xlabel('Epoch')
             plt.ylabel('Time (seconds)')
             plt.grid(True)
-            plt.savefig(os.path.join(plots_dir, 'epoch_times.png')) # save the plot as a png file
-            plt.tight_layout()
-            plt.show()
+            # save the plot as a png file
+            plt.savefig(os.path.join(plots_dir, 'epoch_times.png'))
+            # plt.tight_layout()
+            # plt.show()
 
 
 # helper class for context management when not using mlflow

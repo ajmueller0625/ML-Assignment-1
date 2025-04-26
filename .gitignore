@@ -193,3 +193,6 @@ checkpoints/
 .pdb
 .ipynb_checkpoints
 .pdf
+
+hyperparameter_results/
+Assignment-1-Part-2-notebooks/
