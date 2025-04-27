@@ -5,6 +5,7 @@ import mlflow
 from datetime import datetime
 import matplotlib.pyplot as plt
 from cnnLayer import CNNLayer
+from resnetTransfer import ResNetTransfer
 import time
 
 
@@ -57,7 +58,7 @@ class Trainer:
         self.checkpoint_dir = checkpoint_dir
         self.experiment_name = experiment_name
         self.input_size = None  # will be set during first forward pass
-        self.is_cnn = isinstance(self.model, CNNLayer)
+        self.is_cnn = isinstance(self.model, CNNLayer) or isinstance(self.model, ResNetTransfer)
 
         # create checkpoint directory if it doesn't exist
         os.makedirs(checkpoint_dir, exist_ok=True)

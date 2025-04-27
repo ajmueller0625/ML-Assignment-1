@@ -5,21 +5,20 @@ import torchvision
 import torchvision.transforms as transforms
 from torch.utils.data import DataLoader
 from trainer import Trainer
-from perceptron import Perceptron
-from cnnLayer import CNNLayer
+from resnetTransfer import ResNetTransfer
 
 if __name__ == "__main__":
     # set random seed for reproducibility
     torch.manual_seed(42)
 
-    # define hyperparameters från best configuration in the previous part
+    # define hyperparameters with lower learning rate for transfer learning
     hyperparameters = {
             'input_channels': 1,
+            'batch_size': 64,
             'num_classes': 10,
             'dropout_rate': 0.5,
             'weight_decay': 1e-4,
-            'learning_rate': 0.01,
-            'batch_size': 64,
+            'learning_rate': 0.001,
             'num_epochs': 10,
             'early_stopping_patience': 5
         }
@@ -30,7 +29,9 @@ if __name__ == "__main__":
     print(f'Using device: {device}\n')
 
     # define transformations for training set with augmentation
+    # resize to 224x224 for resnet input size
     train_transform = transforms.Compose([
+        transforms.Resize((224, 224)),
         transforms.RandomRotation(10),
         transforms.RandomAffine(degrees=0, translate=(0.1, 0.1), scale=(0.9, 1.1), shear=5),
         transforms.ColorJitter(brightness=0.2, contrast=0.2),
@@ -40,6 +41,7 @@ if __name__ == "__main__":
 
     # define transformations for test set without augmentation
     test_transform = transforms.Compose([
+        transforms.Resize((224, 224)),
         transforms.ToTensor(),
         transforms.Normalize((0.5,), (0.5,))
     ])
@@ -73,7 +75,7 @@ if __name__ == "__main__":
     # create CNN model
     input_channels = hyperparameters['input_channels']
     num_classes = hyperparameters['num_classes']
-    model = CNNLayer(input_channels, num_classes, dropout_rate, weight_decay)
+    model = ResNetTransfer(input_channels, num_classes)
 
     # define loss function and optimizer
     criterion = nn.CrossEntropyLoss()
